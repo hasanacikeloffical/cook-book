@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "911682764483",
+    "project_id": "cookandboo",
+    "storage_bucket": "cookandboo.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:911682764483:android:f37c432e9cbcc77da56c76",
+        "android_client_info": {
+          "package_name": "com.example.cook_book"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDeUOUJqV6mkQ4AykwMa15fM_tXgS9cTxk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
