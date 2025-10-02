@@ -42,7 +42,7 @@ class _AnasayfaPageState extends State<AnasayfaPage> {
       _cart.value = list;
     }
   }
-git 
+
   void _decreaseQty(Map<String, dynamic> item) {
     setState(() {});
     final list = List<Map<String, dynamic>>.from(_cart.value);
