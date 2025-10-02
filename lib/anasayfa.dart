@@ -14,11 +14,11 @@ class AnasayfaPage extends StatefulWidget {
 class _AnasayfaPageState extends State<AnasayfaPage> {
   int _currentIndex = 0;
 
+  // Sepeti uygulama genelinde canlı tutmak için ValueNotifier
   final ValueNotifier<List<Map<String, dynamic>>> _cart =
       ValueNotifier<List<Map<String, dynamic>>>([]);
 
   void _addToCart(Map<String, dynamic> item) {
-    setState(() {});
     final list = List<Map<String, dynamic>>.from(_cart.value);
     final idx = list.indexWhere((c) => c['id'] == item['id']);
     if (idx >= 0) {
@@ -33,7 +33,6 @@ class _AnasayfaPageState extends State<AnasayfaPage> {
   }
 
   void _increaseQty(Map<String, dynamic> item) {
-    setState(() {});
     final list = List<Map<String, dynamic>>.from(_cart.value);
     final idx = list.indexWhere((c) => c['id'] == item['id']);
     if (idx >= 0) {
@@ -44,7 +43,6 @@ class _AnasayfaPageState extends State<AnasayfaPage> {
   }
 
   void _decreaseQty(Map<String, dynamic> item) {
-    setState(() {});
     final list = List<Map<String, dynamic>>.from(_cart.value);
     final idx = list.indexWhere((c) => c['id'] == item['id']);
     if (idx >= 0) {
@@ -59,12 +57,12 @@ class _AnasayfaPageState extends State<AnasayfaPage> {
   }
 
   void _removeFromCart(Map<String, dynamic> item) {
-    setState(() {});
     final list = List<Map<String, dynamic>>.from(_cart.value)
       ..removeWhere((c) => c['id'] == item['id']);
     _cart.value = list;
   }
 
+  // Alt sayfalar: UrunlerPage'e sepet fonksiyonlarını geçiyoruz
   List<Widget> get _pages => [
         UrunlerPage(
           cartNotifier: _cart,
@@ -73,18 +71,38 @@ class _AnasayfaPageState extends State<AnasayfaPage> {
           onDecreaseQty: _decreaseQty,
           onRemoveFromCart: _removeFromCart,
         ),
-        BootcampPage(),
-        HackatlonPage(),
-        AyarlarPage(),
+        const BootcampPage(),
+        const HackatlonPage(),
+        const AyarlarPage(),
       ];
+
+  // Sepet sayfasına git
+  Future<void> _openCart() async {
+    final result = await Navigator.of(context).push<List<Map<String, dynamic>>>(
+      MaterialPageRoute(
+        builder: (_) => CartPage(
+          cart: List<Map<String, dynamic>>.from(_cart.value),
+          onRemove: _removeFromCart,
+        ),
+      ),
+    );
+    // Eğer CartPage geri dönerken güncel liste gönderirse yakalayalım
+    if (result != null) {
+      _cart.value = result;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // Not: İçerideki sayfalar (Urunler/Bootcamp/Hackatlon/Ayarlar) kendi Scaffold'larını
+      // içeriyorsa görsel çakışma olmaması için bu Scaffold'ta AppBar eklemiyoruz.
       body: IndexedStack(
         index: _currentIndex,
         children: _pages,
       ),
+
+      // Alt menü
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         type: BottomNavigationBarType.fixed,
@@ -95,6 +113,45 @@ class _AnasayfaPageState extends State<AnasayfaPage> {
           BottomNavigationBarItem(icon: Icon(Icons.code), label: 'Hackatlon'),
           BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Ayarlar'),
         ],
+      ),
+
+      // Global FAB: Sepete git + adet rozeti
+      floatingActionButton: ValueListenableBuilder<List<Map<String, dynamic>>>(
+        valueListenable: _cart,
+        builder: (context, cart, _) {
+          final count = cart.fold<int>(0, (sum, e) => sum + (e['quantity'] as int? ?? 0));
+          return Stack(
+            alignment: Alignment.topRight,
+            children: [
+              FloatingActionButton.extended(
+                onPressed: _openCart,
+                icon: const Icon(Icons.shopping_cart),
+                label: const Text('Sepet'),
+              ),
+              if (count > 0)
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: Text(
+                      '$count',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -109,7 +166,11 @@ class CartPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final total = cart.fold<double>(
-        0, (sum, item) => sum + (item['price'] as num).toDouble() * (item['quantity'] as int));
+      0,
+      (sum, item) =>
+          sum + (item['price'] as num).toDouble() * (item['quantity'] as int),
+    );
+
     return Scaffold(
       appBar: AppBar(title: const Text('Sepet')),
       body: cart.isEmpty
@@ -131,10 +192,15 @@ class CartPage extends StatelessWidget {
                     ),
                     title: Text(item['title']),
                     subtitle: Text(
-                        '${(item['price'] as num).toStringAsFixed(2)} TL x ${item['quantity']}'),
+                      '${(item['price'] as num).toStringAsFixed(2)} TL x ${item['quantity']}',
+                    ),
                     trailing: IconButton(
                       icon: const Icon(Icons.delete),
-                      onPressed: () => onRemove(item),
+                      onPressed: () {
+                        onRemove(item);
+                        // Anasayfa'ya geri dönüldüğünde sepet güncel kalsın diye pop ile mevcut listeyi döndürüyoruz
+                        Navigator.of(context).pop(cart.where((c) => c['id'] != item['id']).toList());
+                      },
                     ),
                   ),
                 );
@@ -146,8 +212,10 @@ class CartPage extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Toplam: ${total.toStringAsFixed(2)} TL',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Text(
+              'Toplam: ${total.toStringAsFixed(2)} TL',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
             ElevatedButton(
               onPressed: cart.isEmpty
                   ? null

@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'firebase_options.dart';
+import 'pages/auth_page.dart';
 import 'anasayfa.dart';
 import 'bootcamp.dart';
 import 'hackatlon.dart';
-import 'urunler.dart';
 import 'ayarlar.dart';
 
-void main() => runApp(const MyApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -19,36 +28,31 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: Colors.white,
         useMaterial3: true,
       ),
-      initialRoute: '/',
+      home: const _AuthGate(),
       routes: {
-        '/': (_) => const AnasayfaPage(),
+        '/anasayfa': (_) => const AnasayfaPage(),
         '/bootcamp': (_) => const BootcampPage(),
         '/hackatlon': (_) => const HackatlonPage(),
-        '/urunler': (_) {
-          final cart = ValueNotifier<List<Map<String, dynamic>>>([]);
-          void add(Map<String, dynamic> item) {
-            final list = List<Map<String, dynamic>>.from(cart.value);
-            final idx = list.indexWhere((c) => c['id'] == item['id']);
-            if (idx >= 0) {
-              list[idx] = Map<String, dynamic>.from(list[idx])
-                ..['quantity'] = (list[idx]['quantity'] as int? ?? 1) + 1;
-            } else {
-              final newItem = Map<String, dynamic>.from(item)..['quantity'] = 1;
-              list.add(newItem);
-            }
-            cart.value = list;
-          }
-
-          // benzer şekilde increase/decrease/remove implement edin
-          return UrunlerPage(
-            cartNotifier: cart,
-            onAddToCart: add,
-            onIncreaseQty: (_) {},
-            onDecreaseQty: (_) {},
-            onRemoveFromCart: (_) {},
-          );
-        },
         '/ayarlar': (_) => const AyarlarPage(),
+      },
+    );
+  }
+}
+
+class _AuthGate extends StatelessWidget {
+  const _AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snap) {
+        if (snap.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        return snap.hasData ? const AnasayfaPage() : const AuthPage();
       },
     );
   }
